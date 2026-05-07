@@ -1,4 +1,4 @@
-{
+﻿{
   "id": "/amynails_/",
   "name": "Amy Nails ",
   "short_name": "Amy",
@@ -7,8 +7,8 @@
   "scope": "/amynails_/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ec4899",
-  "theme_color": "#ec4899",
+  "background_color": "{{THEME_COLOR}}",
+  "theme_color": "{{THEME_COLOR}}",
   "categories": ["beauty", "business", "productivity"],
   "icons": [
     {
@@ -39,4 +39,3 @@
     }
   ]
 }
-

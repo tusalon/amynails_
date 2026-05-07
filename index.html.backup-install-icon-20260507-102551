@@ -8,7 +8,7 @@
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ec4899">
+    <meta name="theme-color" content="{{THEME_COLOR}}">
     <meta name="color-scheme" content="light">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -126,12 +126,12 @@
                 const btn = document.createElement('button');
                 btn.id = 'install-pwa-template-btn';
                 btn.type = 'button';
-                btn.innerText = 'INSTALAR APP';
+                btn.innerText = 'ðŸ“² INSTALAR APP';
                 btn.style.position = 'fixed';
                 btn.style.bottom = 'calc(20px + env(safe-area-inset-bottom))';
                 btn.style.right = '20px';
                 btn.style.zIndex = '9999';
-                btn.style.background = '#ec4899';
+                btn.style.background = '{{THEME_COLOR}}';
                 btn.style.color = 'white';
                 btn.style.padding = '15px 30px';
                 btn.style.borderRadius = '50px';
@@ -156,7 +156,7 @@
                     if (document.getElementById('install-pwa-template-msg')) return;
                     const msg = document.createElement('div');
                     msg.id = 'install-pwa-template-msg';
-                    msg.innerHTML = 'Para instalar: menu 3 puntos -> Instalar aplicacion';
+                    msg.innerHTML = 'ðŸ“± Para instalar: menÃº 3 puntos â†’ "Instalar aplicaciÃ³n"';
                     msg.style.position = 'fixed';
                     msg.style.bottom = 'calc(20px + env(safe-area-inset-bottom))';
                     msg.style.left = '20px';
@@ -175,6 +175,5 @@
     </script>
 </body>
 </html>
-
 
 
