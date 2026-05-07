@@ -1,38 +1,39 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Cargando...</title>
-    <meta name="description" content="Reservá tu turno online">
+    <meta name="description" content="ReservÃ¡ tu turno online">
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ec4899">
+    <meta name="theme-color" content="{{THEME_COLOR}}">
+    <meta name="color-scheme" content="light">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Exotic">
+    <meta name="apple-mobile-web-app-title" content="Amy">
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
     
-    <!-- Script para service worker (VERSIÓN DINÁMICA) -->
+    <!-- Script para service worker (VERSIÃ“N DINÃMICA) -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Detectar la ruta base automáticamente
+                // Detectar la ruta base automÃ¡ticamente
                 const pathSegments = window.location.pathname.split('/');
                 const basePath = pathSegments.length > 2 ? '/' + pathSegments[1] : '';
                 const swPath = basePath ? `${basePath}/sw.js` : '/sw.js';
                 
-                console.log('🔄 Registrando Service Worker en:', swPath);
+                console.log('ðŸ”„ Registrando Service Worker en:', swPath);
                 
                 navigator.serviceWorker.register(swPath)
                     .then(registration => {
-                        console.log('✅ Service Worker registrado:', registration.scope);
+                        console.log('âœ… Service Worker registrado:', registration.scope);
                     })
                     .catch(error => {
-                        console.log('❌ Error registrando Service Worker:', error);
+                        console.log('âŒ Error registrando Service Worker:', error);
                     });
             });
         }
@@ -60,7 +61,7 @@
 <body>
     <div id="root"></div>
 
-    <!-- Scripts (rutas relativas) -->
+    <!-- Scripts (rutas relativas) - ORDEN CORRECTO -->
     <script src="utils/supabase-config.js"></script>
     <script src="utils/config-negocio.js"></script>
     <script src="utils/storage.js"></script>
@@ -72,7 +73,7 @@
     <script src="utils/servicios.js"></script>
     <script src="utils/profesionales.js"></script>
     <script src="utils/whatsapp-helper.js"></script>
-     <script src="utils/dias-cerrados.js"></script>
+    <script src="utils/dias-cerrados.js"></script>
 
     <!-- Componentes -->
     <script src="components/Header.js" type="text/babel"></script>
@@ -92,42 +93,45 @@
     <script src="client-app.js" type="text/babel"></script>
     
     <script>
-        // Actualizar título dinámico desde la base de datos
+        // Actualizar tÃ­tulo dinÃ¡mico desde la base de datos
         (async function() {
             try {
                 const nombre = await window.getNombreNegocio();
                 if (nombre) {
                     document.title = `${nombre} - Reserva de Turnos`;
-                    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', nombre.split(' ')[0] || 'Exotic');
+                    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', nombre.split(' ')[0] || 'Amy');
                 }
             } catch (error) {
-                console.error('Error cargando título:', error);
+                console.error('Error cargando tÃ­tulo:', error);
             }
         })();
     </script>
     
     <script>
-        // Forzar prompt de instalación PWA
+        // Forzar prompt de instalaciÃ³n PWA
         window.addEventListener('load', () => {
             if (window.matchMedia('(display-mode: standalone)').matches) {
-                console.log('📱 App ya instalada');
+                console.log('ðŸ“± App ya instalada');
                 return;
             }
 
             let deferredPrompt;
             
             window.addEventListener('beforeinstallprompt', (e) => {
+                if (document.getElementById('install-pwa-template-btn')) return;
                 e.preventDefault();
                 deferredPrompt = e;
-                console.log('✅ beforeinstallprompt listo');
+                console.log('âœ… beforeinstallprompt listo');
                 
                 const btn = document.createElement('button');
-                btn.innerText = '📲 INSTALAR APP';
+                btn.id = 'install-pwa-template-btn';
+                btn.type = 'button';
+                btn.innerText = 'ðŸ“² INSTALAR APP';
                 btn.style.position = 'fixed';
-                btn.style.bottom = '20px';
+                btn.style.bottom = 'calc(20px + env(safe-area-inset-bottom))';
                 btn.style.right = '20px';
                 btn.style.zIndex = '9999';
-                btn.style.background = '#ec4899';
+                btn.style.background = '{{THEME_COLOR}}';
                 btn.style.color = 'white';
                 btn.style.padding = '15px 30px';
                 btn.style.borderRadius = '50px';
@@ -139,7 +143,7 @@
                 btn.onclick = async () => {
                     deferredPrompt.prompt();
                     const { outcome } = await deferredPrompt.userChoice;
-                    console.log(`✅ Usuario: ${outcome}`);
+                    console.log(`âœ… Usuario: ${outcome}`);
                     deferredPrompt = null;
                     btn.remove();
                 };
@@ -149,10 +153,12 @@
 
             setTimeout(() => {
                 if (!deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
+                    if (document.getElementById('install-pwa-template-msg')) return;
                     const msg = document.createElement('div');
-                    msg.innerHTML = '📱 Para instalar: menú 3 puntos → "Instalar aplicación"';
+                    msg.id = 'install-pwa-template-msg';
+                    msg.innerHTML = 'ðŸ“± Para instalar: menÃº 3 puntos â†’ "Instalar aplicaciÃ³n"';
                     msg.style.position = 'fixed';
-                    msg.style.bottom = '20px';
+                    msg.style.bottom = 'calc(20px + env(safe-area-inset-bottom))';
                     msg.style.left = '20px';
                     msg.style.background = '#333';
                     msg.style.color = 'white';
@@ -169,3 +175,5 @@
     </script>
 </body>
 </html>
+
+

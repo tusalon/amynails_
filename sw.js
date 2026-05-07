@@ -1,79 +1,79 @@
-// sw.js - Service Worker para Exotic Nails by Yuly
+﻿// sw.js - Service Worker para Amy Nails 
 
-const CACHE_NAME = 'exoticnailsbyyuly-v1';
+const CACHE_NAME = 'amynails_-v2';
 const urlsToCache = [
-  '/exoticnailsbyyuly/',
-  '/exoticnailsbyyuly/index.html',
-  '/exoticnailsbyyuly/admin.html',
-  '/exoticnailsbyyuly/admin-login.html',
-  '/exoticnailsbyyuly/calendar.html',
-  '/exoticnailsbyyuly/setup-wizard.html',
-  '/exoticnailsbyyuly/editar-negocio.html',
-  '/exoticnailsbyyuly/manifest.json',
-  '/exoticnailsbyyuly/icons/icon-72x72.png',
-  '/exoticnailsbyyuly/icons/icon-96x96.png',
-  '/exoticnailsbyyuly/icons/icon-128x128.png',
-  '/exoticnailsbyyuly/icons/icon-144x144.png',
-  '/exoticnailsbyyuly/icons/icon-152x152.png',
-  '/exoticnailsbyyuly/icons/icon-192x192.png',
-  '/exoticnailsbyyuly/icons/icon-384x384.png',
-  '/exoticnailsbyyuly/icons/icon-512x512.png'
+  '/amynails_/',
+  '/amynails_/index.html',
+  '/amynails_/admin.html',
+  '/amynails_/admin-login.html',
+  '/amynails_/calendar.html',
+  '/amynails_/setup-wizard.html',
+  '/amynails_/editar-negocio.html',
+  '/amynails_/manifest.json',
+  '/amynails_/icons/icon-72x72.png',
+  '/amynails_/icons/icon-96x96.png',
+  '/amynails_/icons/icon-128x128.png',
+  '/amynails_/icons/icon-144x144.png',
+  '/amynails_/icons/icon-152x152.png',
+  '/amynails_/icons/icon-192x192.png',
+  '/amynails_/icons/icon-384x384.png',
+  '/amynails_/icons/icon-512x512.png'
 ];
 
 // ============================================
-// INSTALACIÓN
+// INSTALACIÃ“N
 // ============================================
 self.addEventListener('install', event => {
-  console.log('📦 Service Worker instalando...');
+  console.log('ðŸ“¦ Service Worker instalando...');
   self.skipWaiting();
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('✅ Cache creado, guardando archivos...');
+        console.log('âœ… Cache creado, guardando archivos...');
         return cache.addAll(urlsToCache);
       })
       .catch(error => {
-        console.error('❌ Error al cachear archivos:', error);
+        console.error('âŒ Error al cachear archivos:', error);
       })
   );
 });
 
 // ============================================
-// ACTIVACIÓN
+// ACTIVACIÃ“N
 // ============================================
 self.addEventListener('activate', event => {
-  console.log('🔄 Service Worker activado, limpiando caches antiguos...');
+  console.log('ðŸ”„ Service Worker activado, limpiando caches antiguos...');
   
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('🗑️ Eliminando cache antiguo:', cacheName);
+            console.log('ðŸ—‘ï¸ Eliminando cache antiguo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      console.log('✅ Service Worker activado y listo');
+      console.log('âœ… Service Worker activado y listo');
       return self.clients.claim();
     })
   );
 });
 
 // ============================================
-// ESTRATEGIA DE CACHÉ
+// ESTRATEGIA DE CACHÃ‰
 // ============================================
 self.addEventListener('fetch', event => {
   // Ignorar peticiones que no sean HTTP
   if (!event.request.url.startsWith('http')) return;
   
-  // ⚡ NO INTERCEPTAR WHATSAPP (ESENCIAL PARA iOS)
+  // âš¡ NO INTERCEPTAR WHATSAPP (ESENCIAL PARA iOS)
   if (event.request.url.includes('wa.me') || 
       event.request.url.includes('api.whatsapp.com') ||
       event.request.url.includes('whatsapp.com')) {
-    console.log('📱 Dejando pasar WhatsApp sin cache');
+    console.log('ðŸ“± Dejando pasar WhatsApp sin cache');
     return;
   }
   
@@ -91,7 +91,7 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(networkResponse => {
-        // Si la respuesta es válida, guardar en cache
+        // Si la respuesta es vÃ¡lida, guardar en cache
         if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => {
@@ -104,12 +104,12 @@ self.addEventListener('fetch', event => {
         // Si falla la red, buscar en cache
         return caches.match(event.request).then(cachedResponse => {
           if (cachedResponse) {
-            console.log('📦 Sirviendo desde cache:', event.request.url);
+            console.log('ðŸ“¦ Sirviendo desde cache:', event.request.url);
             return cachedResponse;
           }
           // Si no hay cache y es imagen, devolver icon por defecto
           if (event.request.url.match(/\.(jpg|jpeg|png|gif|svg|webp)$/)) {
-            return caches.match('/exoticnailsbyyuly/icons/icon-192x192.png');
+            return caches.match('/amynails_/icons/icon-192x192.png');
           }
           return new Response('Error de red', { status: 408 });
         });
@@ -121,24 +121,24 @@ self.addEventListener('fetch', event => {
 // MANEJO DE MENSAJES
 // ============================================
 self.addEventListener('message', event => {
-  console.log('📨 Mensaje recibido:', event.data);
+  console.log('ðŸ“¨ Mensaje recibido:', event.data);
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('⏩ Saltando waiting...');
+    console.log('â© Saltando waiting...');
     self.skipWaiting();
   }
   
   if (event.data && event.data.type === 'CLEAR_CACHE') {
-    console.log('🧹 Limpiando todo el cache...');
+    console.log('ðŸ§¹ Limpiando todo el cache...');
     caches.keys().then(cacheNames => {
       cacheNames.forEach(cacheName => {
         caches.delete(cacheName);
-        console.log('🗑️ Cache eliminado:', cacheName);
+        console.log('ðŸ—‘ï¸ Cache eliminado:', cacheName);
       });
     });
   }
 });
 
-console.log('✅ Service Worker configurado para Exotic Nails by Yuly');
-console.log('📦 Cache:', CACHE_NAME);
-console.log('📄 Archivos a cachear:', urlsToCache.length);
+console.log('âœ… Service Worker configurado para Amy Nails ');
+console.log('ðŸ“¦ Cache:', CACHE_NAME);
+console.log('ðŸ“„ Archivos a cachear:', urlsToCache.length);

@@ -1,9 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Administración - Exotic Nails by Yuly</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="{{THEME_COLOR}}">
+    <meta name="color-scheme" content="light">
+    <title>Panel de AdministraciÃ³n - Amy Nails </title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://resource.trickle.so/vendor_lib/unpkg/react@18/umd/react.production.min.js"></script>
     <script src="https://resource.trickle.so/vendor_lib/unpkg/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -25,12 +27,14 @@
     <script src="utils/profesionales.js"></script>
     <script src="utils/config.js"></script>
     <script src="utils/whatsapp-helper.js"></script>
+    <script src="utils/dias-cerrados.js"></script>
 
     <!-- Componentes admin -->
     <script src="components/admin/ConfigPanel.js" type="text/babel"></script>
     <script src="components/admin/ServiciosPanel.js" type="text/babel"></script>
     <script src="components/admin/ProfesionalesPanel.js" type="text/babel"></script>
     <script src="components/admin/HorariosPorDiaPanel.js" type="text/babel"></script>
+    <script src="components/admin/DiasCerradosPanel.js" type="text/babel"></script>
     <script src="admin-app.js" type="text/babel"></script>
 
     <script>
@@ -38,12 +42,12 @@
             const negocioId = localStorage.getItem('negocioId');
             
             if (!negocioId) {
-                console.log('🚫 No hay sesión, redirigiendo a login');
+                console.log('ðŸš« No hay sesiÃ³n, redirigiendo a login');
                 window.location.href = 'admin-login.html';
                 return;
             }
             
-            // Verificar sesión (8 horas)
+            // Verificar sesiÃ³n (8 horas)
             const loginTime = localStorage.getItem('adminLoginTime');
             const isValidSession = loginTime && (Date.now() - parseInt(loginTime)) < 8 * 60 * 60 * 1000;
             
@@ -55,3 +59,4 @@
     </script>
 </body>
 </html>
+
