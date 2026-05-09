@@ -1,6 +1,6 @@
 // sw.js - Service Worker para Amy Nails 
 
-const CACHE_NAME = 'amynails_-v11';
+const CACHE_NAME = 'amynails_-v12';
 const urlsToCache = [
   '/amynails_/',
   '/amynails_/index.html',
