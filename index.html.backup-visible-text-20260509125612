@@ -17,7 +17,7 @@
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
     
-    <!-- Script para service worker (VERSION DINAMICA) -->
+    <!-- Script para service worker (VERSIAN DINAMICA) -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -108,7 +108,7 @@
     </script>
     
     <script>
-        // Forzar prompt de instalacion PWA
+        // Forzar prompt de instalaciA3n PWA
         window.addEventListener('load', () => {
             if (window.matchMedia('(display-mode: standalone)').matches) {
                 console.log('App ya instalada');
