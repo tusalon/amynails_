@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Amy Nails </string>
+    <string name="title_activity_main">Amy Nails </string>
+    <string name="package_name">com.tusalon.amynails</string>
+    <string name="custom_url_scheme">com.tusalon.amynails</string>
+</resources>

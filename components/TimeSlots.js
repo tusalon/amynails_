@@ -1,7 +1,10 @@
 // components/TimeSlots.js - Versión femenina con filtro de horarios permitidos por servicio
 
-function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
+function TimeSlots({ service, date, profesional, cliente, onTimeSelect, selectedTime }) {
     const [slots, setSlots] = React.useState([]);
+    const [occupiedSlots, setOccupiedSlots] = React.useState([]);
+    const [waitlistSlots, setWaitlistSlots] = React.useState({});
+    const [joiningWaitlist, setJoiningWaitlist] = React.useState('');
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState(null);
     const [horariosPorDia, setHorariosPorDia] = React.useState({});
@@ -23,7 +26,7 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                 if (window.salonConfig) {
                     const config = await window.salonConfig.get();
                     console.log('⚙️ Configuración cargada en TimeSlots:', config);
-                    if (config && config.max_antelacion_dias) {
+                    if (config && config.max_antelacion_dias !== undefined) {
                         setMaxAntelacionDias(config.max_antelacion_dias);
                     }
                     if (config && config.min_antelacion_horas !== undefined) {
@@ -57,6 +60,30 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
         return hours * 60 + minutes;
     };
 
+    const normalizeTimeKey = (value) => String(value || '').slice(0, 5);
+
+    const variantesHorarioPermitido = (timeStr) => {
+        const partes = String(timeStr || '').trim().split(':');
+        if (partes.length < 2) return [];
+        const hours = parseInt(partes[0], 10);
+        const minutes = parseInt(partes[1], 10);
+        if (Number.isNaN(hours) || Number.isNaN(minutes)) return [];
+
+        const normal = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        const variantes = [normal];
+        if (hours >= 1 && hours <= 7) {
+            variantes.push(`${String(hours + 12).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+        }
+        return variantes;
+    };
+
+    const servicioPermiteHorario = (servicio, slot) => {
+        const permitidos = servicio?.horarios_permitidos || [];
+        if (!permitidos.length) return true;
+        const normalizados = new Set(permitidos.flatMap(variantesHorarioPermitido));
+        return normalizados.has(slot);
+    };
+
     const slotTieneDescanso = (slotStart, slotEnd, descansosDelDia = []) => {
         return descansosDelDia.some(descanso => {
             if (!descanso?.inicio || !descanso?.fin) return false;
@@ -64,6 +91,34 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
             const descansoEnd = timeToMinutes(descanso.fin);
             return (slotStart < descansoEnd) && (slotEnd > descansoStart);
         });
+    };
+
+    const crearBloquesTrabajo = (slotsDelDia = [], duracionTurno = 60, intervaloTurnos = 0) => {
+        const minutosTrabajo = slotsDelDia
+            .map(timeToMinutes)
+            .sort((a, b) => a - b);
+
+        const bloquesBase = minutosTrabajo.map((minuto, index) => {
+            const siguiente = minutosTrabajo[index + 1];
+            const anterior = minutosTrabajo[index - 1];
+            return {
+                inicio: minuto,
+                fin: siguiente ? Math.max(siguiente, minuto + duracionTurno) : 24 * 60,
+                conectaAnterior: anterior !== undefined && minuto - anterior <= duracionTurno + intervaloTurnos
+            };
+        });
+
+        const bloques = [];
+        bloquesBase.forEach(bloque => {
+            const ultimo = bloques[bloques.length - 1];
+            if (ultimo && bloque.conectaAnterior) {
+                ultimo.fin = Math.max(ultimo.fin, bloque.fin);
+            } else {
+                bloques.push({ inicio: bloque.inicio, fin: bloque.fin });
+            }
+        });
+
+        return bloques;
     };
 
     React.useEffect(() => {
@@ -127,11 +182,6 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
 
     React.useEffect(() => {
         if (!service || !date || !profesional || !verificacionCompleta) return;
-        
-        if (!diaTrabaja) {
-            setSlots([]);
-            return;
-        }
 
         const loadSlots = async () => {
             setLoading(true);
@@ -143,16 +193,17 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                 const diffTime = fechaSeleccionada - hoy;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
-                if (diffDays > maxAntelacionDias) {
+                if (Number(maxAntelacionDias) > 0 && diffDays > Number(maxAntelacionDias)) {
                     console.log(`🚫 Fecha ${date} supera antelación máxima de ${maxAntelacionDias} días`);
                     setError(`Solo se puede reservar con hasta ${maxAntelacionDias} días de antelación`);
                     setSlots([]);
+                    setOccupiedSlots([]);
                     setLoading(false);
                     return;
                 }
                 
-                const [año, mes, día] = date.split('-').map(Number);
-                const fechaLocal = new Date(año, mes - 1, día);
+                const [year, month, day] = date.split('-').map(Number);
+                const fechaLocal = new Date(year, month - 1, day);
                 const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
                 const diaSemana = diasSemana[fechaLocal.getDay()];
                 
@@ -160,10 +211,7 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                 const descansosDelDia = descansosPorDia[diaSemana] || [];
                 
                 if (indicesDelDia.length === 0) {
-                    console.log(`⚠️ No hay horas configuradas para ${diaSemana}`);
-                    setSlots([]);
-                    setLoading(false);
-                    return;
+                    console.log(`No hay horas base configuradas para ${diaSemana}; se revisan turnos ocupados para lista de espera.`);
                 }
                 
                 // Slots base (todos los horarios del profesional para ese día)
@@ -171,7 +219,7 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                 
                 // 🔥 FILTRO POR HORARIOS PERMITIDOS DEL SERVICIO (si existen)
                 if (service.horarios_permitidos && service.horarios_permitidos.length > 0) {
-                    baseSlots = baseSlots.filter(slot => service.horarios_permitidos.includes(slot));
+                    baseSlots = baseSlots.filter(slot => servicioPermiteHorario(service, slot));
                     console.log(`📋 Slots filtrados por horarios permitidos del servicio:`, baseSlots);
                 }
                 
@@ -191,8 +239,44 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                     `${Math.floor(minAllowedMinutes / 60)}:${minAllowedMinutes % 60}`);
                 console.log('📅 Fecha seleccionada:', date, 'es hoy?', esHoy);
                 
-                const bookings = await getBookingsByDateAndProfesional(date, profesional.id);
+                let bookings = await getBookingsByDateAndProfesional(date, profesional.id);
+                if (bookings.length === 0 && window.getBookingsByDate) {
+                    const reservasDia = await window.getBookingsByDate(date);
+                    const nombreProfesional = String(profesional.nombre || '').trim().toLowerCase();
+                    bookings = (reservasDia || []).filter(booking => {
+                        const mismoId = String(booking.profesional_id || '') === String(profesional.id || '');
+                        const mismoNombre = String(booking.profesional_nombre || booking.trabajador_nombre || '').trim().toLowerCase() === nombreProfesional;
+                        return mismoId || mismoNombre;
+                    });
+                }
+                const waitlist = window.getListaEsperaPorFechaProfesional
+                    ? await window.getListaEsperaPorFechaProfesional(date, profesional.id)
+                    : [];
+                const waitlistMap = {};
+                (waitlist || []).forEach(item => {
+                    waitlistMap[normalizeTimeKey(item.hora_inicio)] = item;
+                });
+                setWaitlistSlots(waitlistMap);
                 
+                const occupiedMap = {};
+                const esReservaOcupada = (booking) => {
+                    const estado = String(booking.estado || '').toLowerCase();
+                    return estado !== 'cancelado' && estado !== 'cancelada' && estado !== 'completado' && estado !== 'completada' && estado !== 'ausente';
+                };
+                const agregarTurnoOcupado = (booking) => {
+                    if (!booking?.hora_inicio || !esReservaOcupada(booking)) return;
+                    const hora = normalizeTimeKey(booking.hora_inicio);
+                    const inicioOcupado = timeToMinutes(hora);
+                    if (esHoy && inicioOcupado < minAllowedMinutes) return;
+                    if (!occupiedMap[hora]) {
+                        occupiedMap[hora] = {
+                            hora,
+                            hora_fin: booking.hora_fin,
+                            booking
+                        };
+                    }
+                };
+                bookings.forEach(agregarTurnoOcupado);
                 let availableSlots = baseSlots.filter(slotStartStr => {
                     const slotStart = timeToMinutes(slotStartStr);
                     const slotEnd = slotStart + service.duracion;
@@ -206,13 +290,13 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                         return false;
                     }
 
-                    const hasConflict = bookings.some(booking => {
+                    const bookingConflict = bookings.find(booking => {
                         const bookingStart = timeToMinutes(booking.hora_inicio);
                         const bookingEnd = timeToMinutes(booking.hora_fin);
                         return (slotStart < bookingEnd) && (slotEnd > bookingStart);
                     });
 
-                    if (!hasConflict) {
+                    if (!bookingConflict) {
                         console.log(`✅ Slot ${slotStartStr} disponible`);
                         return true;
                     } else {
@@ -222,8 +306,12 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                 });
                 
                 availableSlots.sort();
+                const occupied = Object.values(occupiedMap);
+                occupied.sort((a, b) => timeToMinutes(a.hora) - timeToMinutes(b.hora));
                 console.log(`✅ Slots disponibles para ${profesional.nombre} el ${date}:`, availableSlots);
+                console.log(`Lista de espera - turnos ocupados para ${profesional.nombre} el ${date}:`, occupied);
                 setSlots(availableSlots);
+                setOccupiedSlots(occupied);
             } catch (err) {
                 console.error(err);
                 setError("Error al cargar horarios");
@@ -234,6 +322,44 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
 
         loadSlots();
     }, [service, date, profesional, horariosPorDia, descansosPorDia, diaTrabaja, verificacionCompleta, maxAntelacionDias, minAntelacionHoras]);
+
+    const handleUnirseListaEspera = async (slot) => {
+        if (!cliente?.nombre || !cliente?.whatsapp) {
+            alert('Necesitas ingresar con tu WhatsApp para anotarte en lista de espera.');
+            return;
+        }
+        if (!window.unirseListaEspera) {
+            alert('La lista de espera todavia no esta disponible.');
+            return;
+        }
+
+        setJoiningWaitlist(slot.hora);
+        try {
+            const result = await window.unirseListaEspera({
+                cliente_nombre: cliente.nombre,
+                cliente_whatsapp: cliente.whatsapp,
+                servicio: service.nombre,
+                duracion: service.duracion,
+                profesional_id: profesional.id,
+                profesional_nombre: profesional.nombre,
+                fecha: date,
+                hora_inicio: slot.hora,
+                hora_fin: slot.hora_fin || slot.booking?.hora_fin
+            });
+
+            if (result.success) {
+                setWaitlistSlots(prev => ({ ...prev, [slot.hora]: result.data }));
+                alert('Listo. Quedaste en lista de espera para ese turno.');
+            } else if (result.reason === 'occupied') {
+                alert('Ese turno ya tiene una clienta en lista de espera.');
+                setWaitlistSlots(prev => ({ ...prev, [slot.hora]: result.data || true }));
+            } else {
+                alert('No se pudo anotarte en lista de espera. Intenta de nuevo.');
+            }
+        } finally {
+            setJoiningWaitlist('');
+        }
+    };
 
     if (!service || !date || !profesional) return null;
 
@@ -251,9 +377,9 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
         );
     }
 
-    if (!diaTrabaja) {
-        const [año, mes, día] = date.split('-').map(Number);
-        const fechaLocal = new Date(año, mes - 1, día);
+    if (!diaTrabaja && occupiedSlots.length === 0) {
+        const [year, month, day] = date.split('-').map(Number);
+        const fechaLocal = new Date(year, month - 1, day);
         const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
         const diaSemana = diasSemana[fechaLocal.getDay()];
         const diaCapitalizado = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
@@ -293,7 +419,7 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                 </div>
             ) : error ? (
                 <div className="p-4 bg-pink-50 text-pink-600 rounded-lg text-sm border border-pink-200">{error}</div>
-            ) : slots.length === 0 ? (
+            ) : slots.length === 0 && occupiedSlots.length === 0 ? (
                 <div className="text-center p-8 bg-pink-50 rounded-xl border border-pink-200">
                     <div className="text-5xl text-pink-400 mb-3">⏰❌</div>
                     <p className="text-pink-700 font-medium">
@@ -322,6 +448,7 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                         </div>
                     )}
                     
+                    {slots.length > 0 && (
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mt-4">
                         {slots.map(time24h => {
                             const time12h = formatTo12Hour(time24h);
@@ -345,6 +472,39 @@ function TimeSlots({ service, date, profesional, onTimeSelect, selectedTime }) {
                             );
                         })}
                     </div>
+                    )}
+
+                    {occupiedSlots.length > 0 && (
+                        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                            <div className="mb-3">
+                                <p className="font-semibold text-amber-800">Turnos ocupados con lista de espera</p>
+                                <p className="text-sm text-amber-700">Puedes anotarte en un turno ocupado. Solo se permite una clienta en espera por horario.</p>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {occupiedSlots.map(slot => {
+                                    const yaTieneEspera = Boolean(waitlistSlots[slot.hora]);
+                                    const cargando = joiningWaitlist === slot.hora;
+                                    return (
+                                        <button
+                                            key={slot.hora}
+                                            type="button"
+                                            onClick={() => handleUnirseListaEspera(slot)}
+                                            disabled={yaTieneEspera || cargando}
+                                            className={`py-3 px-2 rounded-lg text-sm font-semibold transition flex flex-col items-center border
+                                                ${yaTieneEspera
+                                                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                                    : 'bg-white text-amber-800 border-amber-300 hover:bg-amber-100'}`}
+                                        >
+                                            <span>{window.formatTo12Hour ? window.formatTo12Hour(slot.hora) : slot.hora}</span>
+                                            <span className="text-xs font-medium mt-1">
+                                                {cargando ? 'Guardando...' : yaTieneEspera ? 'Lista ocupada' : 'Lista de espera'}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                     
                     <p className="text-xs text-pink-400 mt-3 text-center">
                         ⏰ Horarios cada 30 minutos

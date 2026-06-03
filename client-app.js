@@ -158,7 +158,18 @@ function ClientApp() {
         setSelectedDate('');
         setSelectedTime('');
         setHorariosPorDia({});
+        setTimeout(() => {
+            document.getElementById('profesional-section')?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }, 150);
     };
+
+    const handleNoAvailability = React.useCallback(() => {
+        setSelectedDate('');
+        setSelectedTime('');
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('clienteAuth');
@@ -243,11 +254,19 @@ function ClientApp() {
                             {/* SECCIÓN 2: PROFESIONALES - CON selectedService */}
                             {selectedService && (
                                 <div id="profesional-section">
-                                    <ProfesionalSelector 
-                                        onSelect={setSelectedProfesional} 
-                                        selectedProfesional={selectedProfesional}
-                                        selectedService={selectedService}
-                                    />
+                                    {selectedService.esMultiple ? (
+                                        <MultiProfesionalSelector
+                                            onSelect={setSelectedProfesional}
+                                            selectedProfesional={selectedProfesional}
+                                            selectedService={selectedService}
+                                        />
+                                    ) : (
+                                        <ProfesionalSelector
+                                            onSelect={setSelectedProfesional}
+                                            selectedProfesional={selectedProfesional}
+                                            selectedService={selectedService}
+                                        />
+                                    )}
                                 </div>
                             )}
                             
@@ -257,8 +276,9 @@ function ClientApp() {
                                     <Calendar 
                                         onDateSelect={setSelectedDate} 
                                         selectedDate={selectedDate}
-                                        profesional={selectedProfesional}
-                                    service={selectedService}
+                                        profesional={selectedProfesional?.esMultiple ? selectedProfesional.asignaciones[0]?.profesional : selectedProfesional}
+                                        profesionalCompleto={selectedProfesional}
+                                        service={selectedService}
                                         onHorariosCargados={setHorariosPorDia}
                                     />
                                 </div>
@@ -267,14 +287,26 @@ function ClientApp() {
                             {/* SECCIÓN 4: HORARIOS */}
                             {selectedDate && (
                                 <div id="time-section">
-                                    <TimeSlots 
-                                        service={selectedService}
-                                        date={selectedDate}
-                                        profesional={selectedProfesional}
-                                        onTimeSelect={setSelectedTime}
-                                        selectedTime={selectedTime}
-                                    horariosPorDia={horariosPorDia}
-                                    />
+                                    {selectedService.esMultiple ? (
+                                        <MultiTimeSlots
+                                            service={selectedService}
+                                            date={selectedDate}
+                                            profesional={selectedProfesional}
+                                            onTimeSelect={setSelectedTime}
+                                            selectedTime={selectedTime}
+                                            onNoAvailability={handleNoAvailability}
+                                        />
+                                    ) : (
+                                        <TimeSlots
+                                            service={selectedService}
+                                            date={selectedDate}
+                                            profesional={selectedProfesional}
+                                            cliente={cliente}
+                                            onTimeSelect={setSelectedTime}
+                                            selectedTime={selectedTime}
+                                            horariosPorDia={horariosPorDia}
+                                        />
+                                    )}
                                 </div>
                             )}
                             

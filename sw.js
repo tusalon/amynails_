@@ -1,6 +1,6 @@
 // sw.js - Service Worker para Amy Nails 
 
-const CACHE_NAME = 'amynails_-v12';
+const CACHE_NAME = 'amynails_-v49';
 const urlsToCache = [
   '/amynails_/',
   '/amynails_/index.html',
@@ -17,14 +17,23 @@ const urlsToCache = [
   '/amynails_/icons/icon-152x152.png',
   '/amynails_/icons/icon-192x192.png',
   '/amynails_/icons/icon-384x384.png',
-  '/amynails_/icons/icon-512x512.png'
+  '/amynails_/icons/icon-512x512.png',
+  '/amynails_/vendor/react.production.min.js',
+  '/amynails_/vendor/react-dom.production.min.js',
+  '/amynails_/vendor/babel.min.js',
+  '/amynails_/vendor/bcrypt.min.js',
+  '/amynails_/vendor/tailwind-browser.js',
+  '/amynails_/vendor/lucide/lucide.css',
+  '/amynails_/vendor/lucide/lucide.woff2',
+  '/amynails_/utils/push-config.js',
+  '/amynails_/utils/push-notifications.js'
 ];
 
 // ============================================
 // INSTALACIÓN
 // ============================================
 self.addEventListener('install', event => {
-  console.log('📦 Service Worker instalando...');
+  console.log('📦 📦 Service Worker instalando...');
   self.skipWaiting();
   
   event.waitUntil(
@@ -43,14 +52,14 @@ self.addEventListener('install', event => {
 // ACTIVACIÓN
 // ============================================
 self.addEventListener('activate', event => {
-  console.log('🔄 Service Worker activado, limpiando caches antiguos...');
+  console.log('🔄 🔄 Service Worker activado, limpiando caches antiguos...');
   
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Yi  🗑️ Eliminando cache antiguo:', cacheName);
+            console.log('🗑️ 🗑️ Eliminando cache antiguo:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -69,11 +78,11 @@ self.addEventListener('fetch', event => {
   // Ignorar peticiones que no sean HTTP
   if (!event.request.url.startsWith('http')) return;
   
-  // as ⚠️ NO INTERCEPTAR WHATSAPP (ESENCIAL PARA iOS)
+  // ⚡ ⚠️ NO INTERCEPTAR WHATSAPP (ESENCIAL PARA iOS)
   if (event.request.url.includes('wa.me') || 
       event.request.url.includes('api.whatsapp.com') ||
       event.request.url.includes('whatsapp.com')) {
-    console.log('📱 Dejando pasar WhatsApp sin cache');
+    console.log('📱 📱 Dejando pasar WhatsApp sin cache');
     return;
   }
   
@@ -104,7 +113,7 @@ self.addEventListener('fetch', event => {
         // Si falla la red, buscar en cache
         return caches.match(event.request).then(cachedResponse => {
           if (cachedResponse) {
-            console.log('📦 Sirviendo desde cache:', event.request.url);
+            console.log('📦 📦 Sirviendo desde cache:', event.request.url);
             return cachedResponse;
           }
           // Si no hay cache y es imagen, devolver icon por defecto
@@ -121,22 +130,67 @@ self.addEventListener('fetch', event => {
 // MANEJO DE MENSAJES
 // ============================================
 self.addEventListener('message', event => {
-  console.log(' 📄 Mensaje recibido:', event.data);
+  console.log('📨 📄 Mensaje recibido:', event.data);
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
-    console.log('a ⏩ Saltando waiting...');
+    console.log('⏩ ⏩ Saltando waiting...');
     self.skipWaiting();
   }
   
   if (event.data && event.data.type === 'CLEAR_CACHE') {
-    console.log('Y1 🧹 Limpiando todo el cache...');
+    console.log('🧹 🧹 Limpiando todo el cache...');
     caches.keys().then(cacheNames => {
       cacheNames.forEach(cacheName => {
         caches.delete(cacheName);
-        console.log('Yi  🗑️ Cache eliminado:', cacheName);
+        console.log('🗑️ 🗑️ Cache eliminado:', cacheName);
       });
     });
   }
+});
+
+// ============================================
+// WEB PUSH OPCIONAL
+// ============================================
+self.addEventListener('push', event => {
+  let payload = {};
+
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (error) {
+    payload = {
+      title: 'RservasRoma',
+      body: event.data ? event.data.text() : 'Tienes una nueva notificación'
+    };
+  }
+
+  const title = payload.title || 'RservasRoma';
+  const options = {
+    body: payload.body || 'Tienes una nueva notificación',
+    icon: '/amynails_/icons/icon-192x192.png',
+    badge: '/amynails_/icons/icon-96x96.png',
+    tag: payload.tag || 'rservasroma',
+    data: {
+      url: payload.url || '/amynails_/admin.html',
+      ...(payload.data || {})
+    }
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+
+  const targetUrl = event.notification?.data?.url || '/amynails_/admin.html';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if (client.url.includes(targetUrl) && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+      return null;
+    })
+  );
 });
 
 console.log('✅ Service Worker configurado para Amy Nails ');
